@@ -46,6 +46,39 @@ let universalFilter = 'all';
 let searchQuery = '';
 let userAttempts = {};
 
+function loadLocalAttempts() {
+  testsData.forEach(t => {
+    let totalScore = 0;
+    let totalMax = 0;
+    let completedCount = 0;
+    t.papers.forEach(p => {
+       if(p.url === '#') return;
+       const storageId = 'embedded-jee-cbt-' + p.url.replace('.html','').replace(/[\s\(\)]+/g, '_').replace(/_$/, '');
+       const resStr = localStorage.getItem(storageId + '_result');
+       if(resStr) {
+          try {
+            const res = JSON.parse(resStr);
+            totalScore += res.score || 0;
+            totalMax += res.maxScore || 0;
+            completedCount++;
+          } catch(e){}
+       }
+    });
+    if (completedCount > 0) {
+       if (!userAttempts[t.id]) userAttempts[t.id] = { score: 0, totalMarks: 0 };
+       userAttempts[t.id].score = totalScore;
+       userAttempts[t.id].totalMarks = totalMax;
+    }
+  });
+}
+
+window.addEventListener('focus', () => {
+  if (document.getElementById('testGrid')) {
+    loadLocalAttempts();
+    renderTests();
+  }
+});
+
 function renderTests() {
   const grid = $('#testGrid');
   if(!grid) return;
@@ -98,7 +131,6 @@ $('#testSearch')?.addEventListener('input', e => {
 async function fetchUserAttempts() {
   if (!db || !user) return;
   const snap = await getDocs(query(collection(db, 'users', user.uid, 'attempts')));
-  userAttempts = {};
   snap.forEach(d => {
     const a = d.data();
     if (a.testId) {
@@ -107,6 +139,7 @@ async function fetchUserAttempts() {
       userAttempts[a.testId].totalMarks += Number(a.totalMarks || 180);
     }
   });
+  loadLocalAttempts(); // re-merge local overrides
   renderTests();
 }
 
@@ -123,4 +156,5 @@ handleUser = async function(u) {
 };
 
 // Initial render
+loadLocalAttempts();
 renderTests();
