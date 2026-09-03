@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEXUS — Practice Beyond Limits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<canvas id="universe"></canvas><div class="vignette"></div><div class="grain"></div>
+<header class="topbar">
+  <button class="brand" id="brandBtn"><span class="brand-mark">N</span><span>NEXUS</span></button>
+  <div class="top-right">
+    <span id="hello" class="hello hidden"></span>
+    <button id="loginBtn" class="login-btn"><span class="google-g">G</span> Sign in with Google</button>
+    <div id="profileWrap" class="profile-wrap hidden"><button id="profileBtn" class="avatar"><img id="avatarImg" alt="Profile"></button><div id="profileMenu" class="profile-menu"><div class="profile-email" id="profileEmail"></div><button id="logoutBtn">Log out</button></div></div>
+  </div>
+</header>
+<aside id="sidebar" class="sidebar collapsed">
+  <button id="sideToggle" class="side-toggle" aria-label="Toggle menu">☰</button>
+  <nav id="nav"></nav>
+  <div class="side-bottom"><button class="nav-item" data-section="settings"><span>⚙</span><b>Settings</b></button></div>
+</aside>
+<main id="app">
+<section id="home" class="page active">
+  <div class="hero">
+    <div class="eyebrow"><span></span> YOUR NEXT LEVEL STARTS HERE</div>
+    <h1>Train your mind.<br><em>Break the limit.</em></h1>
+    <p class="quote">“The future belongs to those who prepare for it today.”</p>
+    <div class="hero-actions"><button class="primary" id="practiceBtn">Enter Practice <span>→</span></button><button class="ghost" id="exploreBtn">Explore</button></div>
+    <div class="stats"><div><strong>∞</strong><small>Questions</small></div><i></i><div><strong>24/7</strong><small>Practice</small></div><i></i><div><strong>1%</strong><small>Better daily</small></div></div>
+  </div>
+  <div class="orbit-card"><div class="orbit-ring r1"></div><div class="orbit-ring r2"></div><div class="orbit-core">N</div><div class="orbit-dot d1"></div><div class="orbit-dot d2"></div><div class="orbit-dot d3"></div><span class="orbit-label">FOCUS<br><b>MODE</b></span></div>
+</section>
+<section id="practice" class="page"><div class="section-head"><div><span class="eyebrow">PRACTICE</span><h2>Choose your arena.</h2></div></div><div class="cards" id="practiceCards"></div></section>
+<section id="tests" class="page">
+  <div class="section-head"><div><span class="eyebrow">TEST CENTER</span><h2>Mock tests & challenges.</h2></div></div>
+  <div class="test-controls">
+    <input type="text" id="testSearch" placeholder="Search tests..." class="test-search">
+    <div class="test-categories" id="testCategories">
+      <button class="cat-btn active" data-cat="ja">JEE Advanced</button>
+      <button class="cat-btn" data-cat="jm">JEE Mains</button>
+      <button class="cat-btn" data-cat="universal">Universal Test</button>
+      <button class="cat-btn" data-cat="pyq">PYQ</button>
+      <button class="cat-btn" data-cat="aits">AITS</button>
+    </div>
+    <div id="universalFilters" class="universal-filters hidden">
+      <button class="filter-btn active" data-filter="all">All Universal</button>
+      <button class="filter-btn" data-filter="ja">JA</button>
+      <button class="filter-btn" data-filter="jm">JM</button>
+    </div>
+  </div>
+  <div class="test-grid" id="testGrid"></div>
+</section>
+<section id="analytics" class="page"><div class="section-head"><div><span class="eyebrow">INTELLIGENCE</span><h2>Your progress.</h2></div></div><div class="analytics-grid"><div class="metric"><span>Tests</span><strong id="mTests">0</strong></div><div class="metric"><span>Questions</span><strong id="mQuestions">0</strong></div><div class="metric"><span>Accuracy</span><strong id="mAccuracy">—</strong></div><div class="metric wide"><span>Recent activity</span><div id="activity">No synced attempts yet.</div></div></div></section>
+<section id="leaderboard" class="page"><div class="section-head"><div><span class="eyebrow">RANKED</span><h2>Leaderboard.</h2></div></div><div class="empty-card"><div class="big-icon">✦</div><h3>Compete globally.</h3><p>Connect Firestore in <code>firebase-config.js</code> to populate a global leaderboard.</p></div></section>
+<section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">CONTROL</span><h2>Settings.</h2></div></div><div class="settings-card"><label>Display name <input id="displayName" placeholder="Auto from Google account"></label><label>Reduced motion <input id="reducedMotion" type="checkbox"></label><button class="primary" id="saveSettings">Save settings</button></div></section>
+</main>
+<div id="toast"></div>
+<script type="module" src="app.js"></script>
+</body></html>
