@@ -1,14 +1,14 @@
 {
-  "name": "nexus-cbt",
+  "name": "cbt-platform",
   "version": "1.0.0",
-  "description": "NEXUS CBT Practice",
+  "description": "CBT Practice",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "vite": "^6.2.3"
+  "devDependencies": {
+    "vite": "^5.0.0"
   }
 }

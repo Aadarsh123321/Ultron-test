@@ -1,7 +1,7 @@
 /*
- NEXUS CBT BRIDGE
+ APP CBT BRIDGE
  Your existing CBT code can call:
-   window.NEXUS.saveAttempt({
+   window.APP.saveAttempt({
      title: 'JEE Mock 01',
      questions: 90,
      correct: 68,
@@ -11,6 +11,6 @@
    });
 
  Then the attempt is stored under users/{uid}/attempts in Firestore and follows the Google account.
- You can also navigate with window.NEXUS.showPage('analytics').
+ You can also navigate with window.APP.showPage('analytics').
 */
 export {};

@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>NEXUS — Practice Beyond Limits</title>
+<title>Practice Beyond Limits</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-<canvas id="universe"></canvas><div class="vignette"></div><div class="grain"></div>
 <header class="topbar">
-  <button class="brand" id="brandBtn"><span class="brand-mark">N</span><span>NEXUS</span></button>
+  <button class="brand" id="brandBtn"><span class="brand-mark"></span><span></span></button>
   <div class="top-right">
     <span id="hello" class="hello hidden"></span>
     <button id="loginBtn" class="login-btn"><span class="google-g">G</span> Sign in with Google</button>
@@ -31,7 +31,6 @@
     <div class="hero-actions"><button class="primary" id="practiceBtn">Enter Practice <span>→</span></button><button class="ghost" id="exploreBtn">Explore</button></div>
     <div class="stats"><div><strong>∞</strong><small>Questions</small></div><i></i><div><strong>24/7</strong><small>Practice</small></div><i></i><div><strong>1%</strong><small>Better daily</small></div></div>
   </div>
-  <div class="orbit-card"><div class="orbit-ring r1"></div><div class="orbit-ring r2"></div><div class="orbit-core">N</div><div class="orbit-dot d1"></div><div class="orbit-dot d2"></div><div class="orbit-dot d3"></div><span class="orbit-label">FOCUS<br><b>MODE</b></span></div>
 </section>
 <section id="practice" class="page"><div class="section-head"><div><span class="eyebrow">PRACTICE</span><h2>Choose your arena.</h2></div></div><div class="cards" id="practiceCards"></div></section>
 <section id="tests" class="page">
@@ -50,6 +49,11 @@
       <button class="filter-btn" data-filter="ja">JA</button>
       <button class="filter-btn" data-filter="jm">JM</button>
     </div>
+    <div id="jmFilters" class="jm-filters hidden">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="mock">Mock</button>
+      <button class="filter-btn" data-filter="pyp">PYP</button>
+    </div>
   </div>
   <div class="test-grid" id="testGrid"></div>
 </section>
@@ -64,5 +68,6 @@
   </div>
   <iframe id="testIframe" class="test-iframe"></iframe>
 </div>
+<script type="module" src="script.js"></script>
 <script type="module" src="app.js"></script>
 </body></html>
