@@ -58,5 +58,11 @@
 <section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">CONTROL</span><h2>Settings.</h2></div></div><div class="settings-card"><label>Display name <input id="displayName" placeholder="Auto from Google account"></label><label>Reduced motion <input id="reducedMotion" type="checkbox"></label><button class="primary" id="saveSettings">Save settings</button></div></section>
 </main>
 <div id="toast"></div>
+<div id="testPlayerOverlay" class="test-player-overlay hidden">
+  <div class="test-player-header">
+    <button id="closeTestBtn" class="close-test-btn">Exit Test</button>
+  </div>
+  <iframe id="testIframe" class="test-iframe"></iframe>
+</div>
 <script type="module" src="app.js"></script>
 </body></html>

@@ -22,3 +22,8 @@
 @keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 .paper-btn{flex:1;padding:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;font-size:13px;text-align:center;color:white;text-decoration:none;transition:.2s}
 .paper-btn:hover{background:rgba(255,255,255,.15)}
+.test-player-overlay{position:fixed;inset:0;z-index:99999;background:#050006;display:flex;flex-direction:column}
+.test-player-header{height:50px;background:#000;display:flex;justify-content:flex-end;align-items:center;padding:0 15px;border-bottom:1px solid rgba(255,80,110,.18)}
+.close-test-btn{background:#ff2a55;color:white;padding:8px 16px;border-radius:8px;font-weight:bold;font-size:14px;transition:0.2s}
+.close-test-btn:hover{background:#ff6a7f}
+.test-iframe{flex:1;width:100%;border:none;background:#050006}

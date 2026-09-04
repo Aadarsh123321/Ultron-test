@@ -98,7 +98,7 @@ function renderTests() {
     const classStr = isCompleted ? 'test-card completed' : 'test-card';
     const papersHtml = t.papers.map(p => {
       const url = p.url.startsWith('#') ? p.url : encodeURI(p.url);
-      return `<a href="${url}" target="_blank" class="paper-btn" onclick="event.stopPropagation()">${p.name}</a>`;
+      return `<button onclick="openTest('${url}'); event.stopPropagation();" class="paper-btn">${p.name}</button>`;
     }).join('');
     return `<div class="${classStr}" onclick="this.classList.toggle('expanded')">${scoreHtml}<div class="test-title">${t.title}</div><div class="paper-list">${papersHtml}</div></div>`;
   }).join('');
@@ -158,3 +158,43 @@ handleUser = async function(u) {
 // Initial render
 loadLocalAttempts();
 renderTests();
+
+window.openTest = async function(url) {
+  if (url === '#') return;
+  try {
+    const overlay = document.getElementById('testPlayerOverlay');
+    overlay.classList.remove('hidden');
+    const iframe = document.getElementById('testIframe');
+    const res = await fetch(url);
+    let html = await res.text();
+    const antiInspectScript = `
+    <script>
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if(event.key === 'F12' || (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J' || event.key === 'C')) || (event.ctrlKey && event.key === 'u')) {
+                event.preventDefault();
+            }
+        });
+        document.addEventListener('copy', event => event.preventDefault());
+    </script>
+    `;
+    if(html.includes('</head>')) {
+      html = html.replace('</head>', antiInspectScript + '</head>');
+    } else {
+      html = antiInspectScript + html;
+    }
+    iframe.contentWindow.document.open();
+    iframe.contentWindow.document.write(html);
+    iframe.contentWindow.document.close();
+  } catch (err) {
+    console.error("Failed to load test:", err);
+    toast("Failed to load the test. Please check connection.");
+  }
+};
+
+document.getElementById('closeTestBtn')?.addEventListener('click', () => {
+  document.getElementById('testPlayerOverlay').classList.add('hidden');
+  document.getElementById('testIframe').src = 'about:blank'; // clean memory
+  loadLocalAttempts();
+  renderTests();
+});
