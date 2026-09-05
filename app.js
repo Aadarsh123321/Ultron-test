@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, getCountFromServer, where, deleteDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { testsData } from './tests-data.js';
 
@@ -44,20 +44,32 @@ async function loadProfile(){if(!db||!user)return;const s=await getDoc(doc(db,'u
   }}
 export async function saveAttempt(attempt){
     if(!db||!user)return false;
-    await addDoc(collection(db,'users',user.uid,'attempts'),{...attempt,createdAt:serverTimestamp()});
-    // Aggregation for leaderboard
-    let totalScoreAgg = 0;
-    Object.values(userAttempts).forEach(ua => totalScoreAgg += Number(ua.score||0));
-    // add this latest attempt score since userAttempts might not be updated yet
-    if (!userAttempts[attempt.testId]) {
-      totalScoreAgg += attempt.score;
-    } else {
-      totalScoreAgg = totalScoreAgg - userAttempts[attempt.testId].score + Math.max(userAttempts[attempt.testId].score, attempt.score);
-    }
+    const attemptDocRef = doc(db, 'users', user.uid, 'attempts', attempt.testId);
+    await setDoc(attemptDocRef, {...attempt, createdAt:serverTimestamp()});
+    
+    const snap = await getDocs(collection(db, 'users', user.uid, 'attempts'));
+    let bestAttempts = {};
+    snap.forEach(d => {
+       let a = d.data();
+       if (!a.testId) a.testId = d.id;
+       if (!bestAttempts[a.testId] || (a.createdAt && bestAttempts[a.testId].createdAt && a.createdAt.toMillis() > bestAttempts[a.testId].createdAt.toMillis())) {
+           bestAttempts[a.testId] = a;
+       }
+    });
+
+    let totalTests = 0, totalScore = 0, totalQuestions = 0, totalCorrect = 0;
+    Object.values(bestAttempts).forEach(a => {
+      totalTests++;
+      totalScore += Number(a.score||0);
+      totalQuestions += Number(a.questions||0);
+      totalCorrect += Number(a.correct||0);
+    });
+    let accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
     await setDoc(doc(db,'users',user.uid),{
       lastActiveAt:serverTimestamp(), 
       displayName: $('#displayName').value || user.displayName || 'Anonymous',
-      totalScore: totalScoreAgg
+      totalScore, totalTests, totalQuestions, totalCorrect, accuracy
     },{merge:true});
     return true;
   }
@@ -66,7 +78,15 @@ async function refreshAnalytics(){
     try {
       const snap=await getDocs(collection(db,'users',user.uid,'attempts'));
       let docsArr = [];
-      snap.forEach(d => docsArr.push(d.data()));
+      let bestAttempts = {};
+      snap.forEach(d => {
+         let a = d.data();
+         if (!a.testId) a.testId = d.id;
+         if (!bestAttempts[a.testId] || (a.createdAt && bestAttempts[a.testId].createdAt && a.createdAt.toMillis() > bestAttempts[a.testId].createdAt.toMillis())) {
+             bestAttempts[a.testId] = a;
+         }
+      });
+      Object.values(bestAttempts).forEach(a => docsArr.push(a));
       docsArr.sort((a,b) => {
         let ta = a.createdAt ? (typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : Date.now()) : 0;
         let tb = b.createdAt ? (typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : Date.now()) : 0;
@@ -114,7 +134,7 @@ async function refreshLeaderboard(){
     snap.forEach(d => {
        usersArr.push({ id: d.id, ...d.data() });
     });
-    usersArr.sort((a,b) => (b.totalScore||0) - (a.totalScore||0));
+    usersArr.sort((a,b) => (b.totalTests||0) - (a.totalTests||0));
     
     let html = '';
     let rank = 1;
@@ -124,12 +144,14 @@ async function refreshLeaderboard(){
     top10.forEach(u => {
        const isMe = user && u.id === user.uid;
        if (isMe) foundMe = true;
-       html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid rgba(255,255,255,.05); ${isMe?'color:#ff4265; font-weight:bold;':''}">
+       let initial = (u.displayName||'A').charAt(0).toUpperCase();
+       let safeName = (u.displayName||'Anonymous').replace(/'/g, "\\'");
+       html += `<div onclick="showUserProfile('${safeName}', ${u.totalTests||0}, ${u.totalQuestions||0}, ${u.accuracy||0}, '${initial}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid rgba(255,255,255,.05); ${isMe?'color:#ff4265; font-weight:bold;':''}">
           <div style="display:flex; align-items:center; gap:12px;">
              <div style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.1); display:grid; place-items:center; font-size:12px; font-weight:700;">${rank}</div>
              <div style="font-size:15px;">${u.displayName || 'Anonymous'}</div>
           </div>
-          <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalScore || 0}</div>
+          <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalTests || 0}</div>
        </div>`;
        rank++;
     });
@@ -144,14 +166,14 @@ async function refreshLeaderboard(){
           // get user's doc directly
           const myDoc = await getDoc(doc(db, 'users', user.uid));
           if (myDoc.exists()) {
-             const u = myDoc.data();
              const myRank = usersArr.findIndex(x => x.id === user.uid) + 1;
+             const u = usersArr.find(x => x.id === user.uid) || myDoc.data();
              $('#currentUserRank').innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; color:#ff4265; font-weight:bold;">
                  <div style="display:flex; align-items:center; gap:12px;">
                    <div style="width:28px; height:28px; border-radius:50%; background:rgba(255,42,85,0.2); display:grid; place-items:center; font-size:12px;">${myRank}</div>
                    <div style="font-size:15px;">${u.displayName || 'You'}</div>
                  </div>
-                 <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalScore || 0}</div>
+                 <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalTests || 0}</div>
              </div>`;
              $('#currentUserRank').style.display='block';
           } else {
@@ -168,6 +190,64 @@ async function refreshLeaderboard(){
 }
 
 window.APP_API={get user(){return user},saveAttempt,showPage,toast};
+window.showUserProfile = function(name, tests, questions, accuracy, initial) {
+    document.getElementById('upmName').textContent = name;
+    document.getElementById('upmTests').textContent = tests || 0;
+    document.getElementById('upmQs').textContent = questions || 0;
+    document.getElementById('upmAcc').textContent = accuracy ? accuracy + '%' : '0%';
+    document.getElementById('upmAvatar').textContent = initial;
+    document.getElementById('userProfileModal').style.display = 'grid';
+};
+window.APP_API.deleteAttemptByStorageId = async (storageId) => {
+    if(!db||!user) return;
+    let testId = storageId;
+    if (typeof testsData !== 'undefined') {
+       for (const t of testsData) {
+          let found = false;
+          for (const p of t.papers) {
+             const fileName = p.url.split('/').pop();
+             const sId = 'embedded-jee-cbt-' + fileName.replace('.html','').replace(/[\s\(\)]+/g, '_').replace(/_$/, '');
+             if (sId === storageId) { testId = t.id; found = true; break; }
+          }
+          if(found) break;
+       }
+    }
+    try {
+        await deleteDoc(doc(db, 'users', user.uid, 'attempts', testId));
+        // Also try querying for old docs with this testId
+        const oldSnap = await getDocs(query(collection(db, 'users', user.uid, 'attempts'), where('testId', '==', testId)));
+        oldSnap.forEach(d => {
+            deleteDoc(d.ref).catch(()=>{});
+        });
+        
+        // Recalculate
+        const snap = await getDocs(collection(db, 'users', user.uid, 'attempts'));
+        let bestAttempts = {};
+        snap.forEach(d => {
+           let a = d.data();
+           if (!a.testId) a.testId = d.id;
+           if (!bestAttempts[a.testId] || (a.createdAt && bestAttempts[a.testId].createdAt && a.createdAt.toMillis() > bestAttempts[a.testId].createdAt.toMillis())) {
+               bestAttempts[a.testId] = a;
+           }
+        });
+        let totalTests = 0, totalScore = 0, totalQuestions = 0, totalCorrect = 0;
+        Object.values(bestAttempts).forEach(a => {
+            totalTests++;
+            totalScore += Number(a.score||0);
+            totalQuestions += Number(a.questions||0);
+            totalCorrect += Number(a.correct||0);
+        });
+        let accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+        await setDoc(doc(db,'users',user.uid),{
+            totalScore, totalTests, totalQuestions, totalCorrect, accuracy
+        }, {merge:true});
+        
+        delete userAttempts[testId];
+        refreshAnalytics();
+        renderTests();
+    } catch(e) {}
+};
+
 
 window.CBT_SAVE_RESULT = async (payload) => {
   if (window.APP_API && window.APP_API.saveAttempt) {

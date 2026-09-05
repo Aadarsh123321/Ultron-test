@@ -87,4 +87,28 @@
 </div>
 <script type="module" src="script.js"></script>
 <script type="module" src="app.js"></script>
+  <div id="userProfileModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; place-items:center; backdrop-filter:blur(5px);">
+    <div style="background:linear-gradient(145deg, rgba(28,7,18,0.95), rgba(9,2,8,0.95)); border:1px solid #ff2e5b; border-radius:24px; padding:30px; width:90%; max-width:400px; text-align:center; box-shadow:0 0 40px rgba(255,20,70,0.3); position:relative;">
+      <button onclick="document.getElementById('userProfileModal').style.display='none'" style="position:absolute; top:15px; right:20px; background:transparent; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+      <div id="upmAvatar" style="width:70px; height:70px; border-radius:50%; margin:0 auto 15px; background:rgba(255,255,255,0.1); display:grid; place-items:center; font-size:30px; font-weight:bold; color:white;"></div>
+      <h3 id="upmName" style="color:white; font-size:22px; margin-bottom:5px; font-family:'Space Grotesk', sans-serif;">Name</h3>
+      <div style="color:var(--muted); font-size:14px; margin-bottom:25px;">Player Stats</div>
+      <div style="display:flex; justify-content:space-around; gap:10px;">
+         <div style="text-align:center;">
+            <div style="font-size:24px; color:white; font-weight:bold; font-family:'Space Grotesk', sans-serif;" id="upmTests">0</div>
+            <div style="font-size:12px; color:#ff6680; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Tests</div>
+         </div>
+         <div style="width:1px; background:rgba(255,255,255,0.1);"></div>
+         <div style="text-align:center;">
+            <div style="font-size:24px; color:white; font-weight:bold; font-family:'Space Grotesk', sans-serif;" id="upmQs">0</div>
+            <div style="font-size:12px; color:#ff6680; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Questions</div>
+         </div>
+         <div style="width:1px; background:rgba(255,255,255,0.1);"></div>
+         <div style="text-align:center;">
+            <div style="font-size:24px; color:white; font-weight:bold; font-family:'Space Grotesk', sans-serif;" id="upmAcc">0%</div>
+            <div style="font-size:12px; color:#ff6680; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Accuracy</div>
+         </div>
+      </div>
+    </div>
+  </div>
 </body></html>
