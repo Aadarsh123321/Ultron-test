@@ -15,8 +15,6 @@ files.sort((a,b) => {
     return numA - numB;
 });
 
-let pyqTests = [];
-
 files.forEach(f => {
     const match = f.match(/Mains Test (\d+)/);
     const num = match[1];
@@ -29,26 +27,6 @@ files.forEach(f => {
   subcat: '${isPyp ? 'pyp' : 'mock'}',
   papers: [
     { name: 'Full Paper', url: 'mains/${f}' }
-  ]
-});\n\n`;
-
-    if (isPyp) {
-        pyqTests.push({
-            id: `pyq-jm-${parseInt(num)}`,
-            title: `Mains Test ${num} (PYP)`,
-            url: `mains/${f}`
-        });
-    }
-});
-
-newData += '// PYQ (from Mains)\n';
-pyqTests.forEach((t, i) => {
-    newData += `testsData.push({
-  id: '${t.id}',
-  title: '${t.title}',
-  category: 'pyq',
-  papers: [
-    { name: 'Full Paper', url: '${t.url}' }
   ]
 });\n\n`;
 });

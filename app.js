@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, getCountFromServer, where } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { testsData } from './tests-data.js';
 
@@ -14,19 +14,140 @@ let app,auth,db,user=null;
 const configured=!firebaseConfig.apiKey.startsWith('PASTE_')&&!firebaseConfig.projectId.startsWith('YOUR_');
 if(configured){app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);onAuthStateChanged(auth,handleUser);}else{toast('Add Firebase config to enable Google sync.');}
 
-async function handleUser(u){user=u;if(u){const first=(u.displayName||'Student').trim().split(/\s+/)[0];$('#hello').textContent=`Hi, ${first}`;$('#hello').classList.remove('hidden');$('#loginBtn').classList.add('hidden');$('#profileWrap').classList.remove('hidden');$('#avatarImg').src=u.photoURL||avatarSVG(first);$('#profileEmail').textContent=u.email||'';await loadProfile();}else{user=null;$('#hello').classList.add('hidden');$('#loginBtn').classList.remove('hidden');$('#profileWrap').classList.add('hidden');}}
+async function handleUser(u){user=u;if(u){const first=(u.displayName||'Student').trim().split(/\s+/)[0];$('#hello').textContent=`Hi, ${first.toUpperCase()}`;$('#hello').classList.remove('hidden');$('#loginBtn').classList.add('hidden');$('#profileWrap').classList.remove('hidden');$('#avatarImg').src=u.photoURL||avatarSVG(first);$('#profileEmail').textContent=u.email||'';await loadProfile();}else{user=null;$('#hello').classList.add('hidden');$('#loginBtn').classList.remove('hidden');$('#profileWrap').classList.add('hidden');}}
 function avatarSVG(t){return 'data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="50" fill="#51051d"/><text x="50" y="58" text-anchor="middle" fill="white" font-size="42" font-family="Arial">${t[0]||'N'}</text></svg>`)}
 $('#loginBtn').onclick=async()=>{if(!configured)return toast('First paste your Firebase config.');try{await signInWithPopup(auth,new GoogleAuthProvider());toast('Welcome.')}catch(e){toast(e.code?.includes('popup')?'Popup was blocked. Allow popups and try again.':e.message)}};
 $('#logoutBtn').onclick=()=>configured&&signOut(auth);$('#profileBtn').onclick=()=>$('#profileMenu').classList.toggle('open');document.addEventListener('click',e=>{if(!$('#profileWrap').contains(e.target))$('#profileMenu').classList.remove('open')});
 
-function showPage(id){$$('.page').forEach(p=>p.classList.toggle('active',p.id===id));$$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.section===id));window.scrollTo({top:0,behavior:'smooth'});if(id==='analytics')refreshAnalytics();}
+function showPage(id){$$('.page').forEach(p=>p.classList.toggle('active',p.id===id));$$('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.section===id));window.scrollTo({top:0,behavior:'smooth'});if(id==='analytics')refreshAnalytics();if(id==='leaderboard')refreshLeaderboard();}
 $$('.nav-item').forEach(b=>b.onclick=()=>showPage(b.dataset.section));$('#practiceBtn').onclick=()=>showPage('practice');$('#exploreBtn').onclick=()=>showPage('tests');$('#brandBtn').onclick=()=>showPage('home');if($('#openCBT'))$('#openCBT').onclick=()=>{toast('CBT hook ready — connect your existing module.');window.dispatchEvent(new CustomEvent('open-cbt'))};
 $('#sideToggle').onclick=()=>$('#sidebar').classList.toggle('collapsed');
-$('#saveSettings').onclick=async()=>{if(!user||!db)return toast('Sign in first.');await setDoc(doc(db,'users',user.uid),{displayName:$('#displayName').value||user.displayName,updatedAt:serverTimestamp()},{merge:true});toast('Settings synced.');};
-async function loadProfile(){if(!db||!user)return;const s=await getDoc(doc(db,'users',user.uid));if(s.exists()&&s.data().displayName)$('#displayName').value=s.data().displayName;else $('#displayName').value=user.displayName||'';}
-export async function saveAttempt(attempt){if(!db||!user)return false;await addDoc(collection(db,'users',user.uid,'attempts'),{...attempt,createdAt:serverTimestamp()});await setDoc(doc(db,'users',user.uid),{lastActiveAt:serverTimestamp()},{merge:true});return true;}
-async function refreshAnalytics(){if(!db||!user){$('#activity').textContent='Sign in to sync your analytics across devices.';return}const snap=await getDocs(query(collection(db,'users',user.uid,'attempts'),orderBy('createdAt','desc'),limit(50)));let tests=0,q=0,correct=0;const rows=[];snap.forEach(d=>{const a=d.data();tests++;q+=Number(a.questions||0);correct+=Number(a.correct||0);rows.push(`${a.title||'CBT Attempt'} — ${a.score??'—'} score`)});$('#mTests').textContent=tests;$('#mQuestions').textContent=q;$('#mAccuracy').textContent=q?Math.round(correct/q*100)+'%':'—';$('#activity').innerHTML=rows.length?rows.slice(0,8).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)">${x}</div>`).join(''):'No synced attempts yet.';}
+$('#saveSettings').onclick=async()=>{
+    if(!user||!db)return toast('Sign in first.');
+    const newName = $('#displayName').value || user.displayName;
+    await setDoc(doc(db,'users',user.uid),{displayName:newName,updatedAt:serverTimestamp()},{merge:true});
+    toast('Settings synced.');
+    const first = newName.trim().split(/\s+/)[0];
+    $('#hello').textContent = 'Hi, ' + first.toUpperCase();
+    $('#profileEmail').textContent = user.email || '';
+  };
+async function loadProfile(){if(!db||!user)return;const s=await getDoc(doc(db,'users',user.uid));if(s.exists()&&s.data().displayName){
+    $('#displayName').value=s.data().displayName;
+    const first = s.data().displayName.trim().split(/\s+/)[0];
+    $('#hello').textContent = 'Hi, ' + first.toUpperCase();
+  } else {
+    $('#displayName').value=user.displayName||'';
+  }}
+export async function saveAttempt(attempt){
+    if(!db||!user)return false;
+    await addDoc(collection(db,'users',user.uid,'attempts'),{...attempt,createdAt:serverTimestamp()});
+    // Aggregation for leaderboard
+    let totalScoreAgg = 0;
+    Object.values(userAttempts).forEach(ua => totalScoreAgg += Number(ua.score||0));
+    // add this latest attempt score since userAttempts might not be updated yet
+    if (!userAttempts[attempt.testId]) {
+      totalScoreAgg += attempt.score;
+    } else {
+      totalScoreAgg = totalScoreAgg - userAttempts[attempt.testId].score + Math.max(userAttempts[attempt.testId].score, attempt.score);
+    }
+    await setDoc(doc(db,'users',user.uid),{
+      lastActiveAt:serverTimestamp(), 
+      displayName: $('#displayName').value || user.displayName || 'Anonymous',
+      totalScore: totalScoreAgg
+    },{merge:true});
+    return true;
+
+async function refreshAnalytics(){
+    if(!db||!user){$('#activity').textContent='Sign in to sync your analytics across devices.';return;}
+    try {
+      const snap=await getDocs(query(collection(db,'users',user.uid,'attempts'),orderBy('createdAt','desc'),limit(50)));
+      let tests=0,q=0,correct=0;const rows=[];
+      snap.forEach(d=>{
+        const a=d.data();
+        tests++;
+        q+=Number(a.questions||0);
+        correct+=Number(a.correct||0);
+        const dt = a.createdAt ? new Date(a.createdAt.toMillis()).toLocaleDateString() : '';
+        rows.push(`<div style="display:flex; justify-content:space-between; padding:14px 0; border-bottom:1px solid rgba(255,255,255,.07); align-items:center;">
+          <div style="display:flex; flex-direction:column; gap:4px; text-align:left;">
+             <strong style="color:white; font-size:15px;">${a.title||'Test Attempt'}</strong>
+             <span style="font-size:12px; color:var(--muted);">${dt}</span>
+          </div>
+          <div style="text-align:right;">
+             <strong style="color:#ff4668; font-size:16px;">${a.score??0} / ${a.totalMarks??300}</strong>
+             <div style="font-size:12px; color:var(--muted);">${a.questions} attempted</div>
+          </div>
+        </div>`);
+      });
+      $('#mTests').textContent=tests;
+      $('#mQuestions').textContent=q;
+      $('#mAccuracy').textContent=q?Math.round(correct/q*100)+'%':'—';
+      $('#activity').innerHTML=rows.length?rows.slice(0,8).join(''):'No synced attempts yet.';
+    } catch (e) {
+      console.error(e);
+      $('#activity').textContent='Error loading analytics. Make sure index exists or check console.';
+    }
+  }const snap=await getDocs(query(collection(db,'users',user.uid,'attempts'),orderBy('createdAt','desc'),limit(50)));let tests=0,q=0,correct=0;const rows=[];snap.forEach(d=>{const a=d.data();tests++;q+=Number(a.questions||0);correct+=Number(a.correct||0);rows.push(`${a.title||'CBT Attempt'} — ${a.score??'—'} score`)});$('#mTests').textContent=tests;$('#mQuestions').textContent=q;$('#mAccuracy').textContent=q?Math.round(correct/q*100)+'%':'—';$('#activity').innerHTML=rows.length?rows.slice(0,8).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)">${x}</div>`).join(''):'No synced attempts yet.';}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.opacity=1;t.style.transform='translate(-50%,0)';clearTimeout(window._toast);window._toast=setTimeout(()=>{t.style.opacity=0;t.style.transform='translate(-50%,20px)'},3000)}
+
+async function refreshLeaderboard(){
+  if(!db){
+    $('#leaderboardList').innerHTML='<div style="padding:40px 0;text-align:center;">Firebase not connected</div>';
+    return;
+  }
+  try {
+    const snap = await getDocs(query(collection(db,'users'), orderBy('totalScore','desc'), limit(10)));
+    let html = '';
+    let rank = 1;
+    let foundMe = false;
+    snap.forEach(d => {
+       const u = d.data();
+       const isMe = user && d.id === user.uid;
+       if (isMe) foundMe = true;
+       html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid rgba(255,255,255,.05); ${isMe?'color:#ff4265; font-weight:bold;':''}">
+          <div style="display:flex; align-items:center; gap:12px;">
+             <div style="width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.1); display:grid; place-items:center; font-size:12px; font-weight:700;">${rank}</div>
+             <div style="font-size:15px;">${u.displayName || 'Anonymous'}</div>
+          </div>
+          <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalScore || 0}</div>
+       </div>`;
+       rank++;
+    });
+    if(html === '') html = '<div style="padding:40px 0;text-align:center;color:var(--muted);">No data yet.</div>';
+    $('#leaderboardList').innerHTML = html;
+    
+    // Bottom rank for current user
+    if (user && db) {
+       if (foundMe) {
+          $('#currentUserRank').style.display='none';
+       } else {
+          // get user's doc directly
+          const myDoc = await getDoc(doc(db, 'users', user.uid));
+          if (myDoc.exists()) {
+             const u = myDoc.data();
+             const snap = await getCountFromServer(query(collection(db, 'users'), where('totalScore', '>', u.totalScore || 0)));
+             const myRank = snap.data().count + 1;
+             $('#currentUserRank').innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; color:#ff4265; font-weight:bold;">
+                 <div style="display:flex; align-items:center; gap:12px;">
+                   <div style="width:28px; height:28px; border-radius:50%; background:rgba(255,42,85,0.2); display:grid; place-items:center; font-size:12px;">${myRank}</div>
+                   <div style="font-size:15px;">${u.displayName || 'You'}</div>
+                 </div>
+                 <div style="font-size:18px; font-family:'Space Grotesk', sans-serif;">${u.totalScore || 0}</div>
+             </div>`;
+             $('#currentUserRank').style.display='block';
+          } else {
+             $('#currentUserRank').style.display='none';
+          }
+       }
+    } else {
+       $('#currentUserRank').style.display='none';
+    }
+  } catch(e) {
+    console.error(e);
+    $('#leaderboardList').innerHTML='<div style="padding:40px 0;text-align:center;color:red;">Error loading leaderboard. Please ensure index on totalScore is built.</div>';
+  }
+}
+
 window.APP_API={get user(){return user},saveAttempt,showPage,toast};
 
 window.CBT_SAVE_RESULT = async (payload) => {
@@ -61,6 +182,8 @@ window.CBT_SAVE_RESULT = async (payload) => {
        questions: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.attempted || 0), 0),
        correct: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.correct || 0), 0),
        wrong: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.wrong || 0), 0),
+       storageId: payload.testId,
+       payloadStr: JSON.stringify(payload),
        testId: gridTestId 
     };
     window.APP_API.saveAttempt(attempt).catch(e => console.log('Sync failed', e));
@@ -179,8 +302,13 @@ async function fetchUserAttempts() {
     const a = d.data();
     if (a.testId) {
       if (!userAttempts[a.testId]) userAttempts[a.testId] = { score: 0, totalMarks: 0 };
-      userAttempts[a.testId].score += Number(a.score || 0);
-      userAttempts[a.testId].totalMarks += Number(a.totalMarks || 180);
+      userAttempts[a.testId].score = Math.max(userAttempts[a.testId].score, Number(a.score || 0));
+      userAttempts[a.testId].totalMarks = Math.max(userAttempts[a.testId].totalMarks, Number(a.totalMarks || 180));
+    }
+    if (a.storageId && a.payloadStr) {
+      try {
+        localStorage.setItem(a.storageId + '_result', a.payloadStr);
+      } catch(e) {}
     }
   });
   loadLocalAttempts(); // re-merge local overrides

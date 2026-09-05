@@ -58,8 +58,17 @@
   <div class="test-grid" id="testGrid"></div>
 </section>
 <section id="analytics" class="page"><div class="section-head"><div><span class="eyebrow">INTELLIGENCE</span><h2>Your progress.</h2></div></div><div class="analytics-grid"><div class="metric"><span>Tests</span><strong id="mTests">0</strong></div><div class="metric"><span>Questions</span><strong id="mQuestions">0</strong></div><div class="metric"><span>Accuracy</span><strong id="mAccuracy">—</strong></div><div class="metric wide"><span>Recent activity</span><div id="activity">No synced attempts yet.</div></div></div></section>
-<section id="leaderboard" class="page"><div class="section-head"><div><span class="eyebrow">RANKED</span><h2>Leaderboard.</h2></div></div><div class="empty-card"><div class="big-icon">✦</div><h3>Compete globally.</h3><p>Connect Firestore in <code>firebase-config.js</code> to populate a global leaderboard.</p></div></section>
-<section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">CONTROL</span><h2>Settings.</h2></div></div><div class="settings-card"><label>Display name <input id="displayName" placeholder="Auto from Google account"></label><label>Reduced motion <input id="reducedMotion" type="checkbox"></label><button class="primary" id="saveSettings">Save settings</button></div></section>
+<section id="leaderboard" class="page"><div class="section-head"><div><span class="eyebrow">RANKED</span><h2>Leaderboard.</h2></div></div><div class="leaderboard-card" style="max-width:800px; margin:0; padding:0; background:rgba(20,4,12,0.8); border:1px solid var(--line); border-radius:22px; backdrop-filter:blur(18px); overflow:hidden;">
+     <div style="padding:20px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; color:var(--muted); font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px;">
+        <span>Rank & Name</span><span>Total Score</span>
+     </div>
+     <div id="leaderboardList" style="padding:0 20px;">
+        <div style="padding:40px 0; text-align:center; color:var(--muted);">Loading leaderboard...</div>
+     </div>
+     <div id="currentUserRank" style="padding:15px 20px; background:rgba(255,42,85,0.1); border-top:1px solid rgba(255,42,85,0.3); display:none;">
+     </div>
+   </div></section>
+<section id="settings" class="page"><div class="section-head"><div><span class="eyebrow">CONTROL</span><h2>Settings.</h2></div></div><div class="settings-card"><label>Display name <input id="displayName" placeholder="Auto from Google account"></label><button class="primary" id="saveSettings">Save settings</button></div></section>
 </main>
 <div id="toast"></div>
 <div id="testPlayerOverlay" class="test-player-overlay hidden">

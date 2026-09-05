@@ -53,13 +53,54 @@ function scoreFor(q,a){let pos=Number(q.positiveMarks??4),neg=Number(q.negativeM
 function answeredValue(a){return a!==null && (!(Array.isArray(a))||a.length>0)&&String(a).trim()!==''}
 function band(p){if(p>=80)return'Excellent';if(p>=70)return'Good';if(p>=60)return'Good';if(p>=50)return'Needs Improvement';return'Needs Improvement'}
 function submitTest(auto=false){if(submitted)return;capture();submitted=true;clearInterval(timerId);let total=0,max=0,by={};let used=10800-remaining;QUESTIONS.forEach((q,i)=>{let maxq=Number(q.positiveMarks??4);max+=maxq;let sc=scoreFor(q,answers[i]);total+=sc;if(!by[q.subject])by[q.subject]={score:0,max:0,correct:0,wrong:0,attempted:0};by[q.subject].score+=sc;by[q.subject].max+=maxq;if(answeredValue(answers[i])){by[q.subject].attempted++;if(isCorrect(q,answers[i]))by[q.subject].correct++;else by[q.subject].wrong++}});renderResult(total,max,by,auto,used);persistResult(total,max,by,used)}
-function renderResult(total,max,by,auto,used){$('#exam').classList.add('hidden');$('#result').style.display='block';$('#timer').style.display='none';$('#submit').textContent='Reattempt';$('#submit').onclick=reattempt;$('#submit').style.display='inline-block';let pct=max?Math.max(0,total/max*100):0;$('#finalScore').textContent=`${total} / ${max}`;$('#finalPct').textContent=`${pct.toFixed(1)}% · Time used ${formatTime(used)}`;$('#finalBand').textContent=band(pct)+(auto?' · Time ended':'');$('#subjects').innerHTML=subjects().map(s=>{let x=by[s],p=x.max?Math.max(0,x.score/x.max*100):0;return `<div class="subject"><b>${s}</b><div class="score" style="font-size:25px">${x.score} / ${x.max}</div><div class="bar"><i style="width:${Math.max(0,Math.min(100,p))}%"></i></div><div class="muted">${p.toFixed(1)}% · ${band(p)} · ${x.correct} correct · ${x.wrong} wrong · Time ${formatTime(subjectTime[s]||0)}</div></div>`}).join('');$('#analysis').innerHTML=QUESTIONS.map((q,i)=>{let att=answeredValue(answers[i]),ok=att&&isCorrect(q,answers[i]);let status=!att?'UNATTEMPTED':ok?'CORRECT':'INCORRECT';let cls=status==='CORRECT'?'correct':status==='INCORRECT'?'wrong':'';let ua=Array.isArray(answers[i])?answers[i].join(', '):(answers[i]??'—');let ca=q.type==='Numeric'?q.correctText:(q.correctOptionIds||[q.correctOptionId]).join(', ');return `<div class="review-item ${cls}"><div class="label ${status==='CORRECT'?'good':status==='INCORRECT'?'bad':''}">${status}</div><h3>Question ${i+1} · ${q.subject}</h3><div>${(q.questionImages?.en||[]).map(u=>`<img src="${u}" loading="lazy">`).join('')}</div><div class="answerline"><b>Your answer:</b> ${ua} &nbsp; <b>Correct:</b> ${ca}</div><button class="action" onclick="this.nextElementSibling.classList.toggle('hidden')">See Solution</button><div class="solution hidden">${(q.solutionImages?.en||[]).map(u=>`<img src="${u}" loading="lazy">`).join('')}</div></div>`}).join('')}
+function renderResult(total,max,by,auto,used){
+    $('#exam').classList.add('hidden');
+    $('#result').style.display='block';
+    $('#timer').style.display='none';
+    $('#submit').textContent='Reattempt';
+    $('#submit').onclick=reattempt;
+    $('#submit').style.display='inline-block';
+    let pct=max?Math.max(0,total/max*100):0;
+    $('#finalScore').textContent=`${total} / ${max}`;
+    $('#finalPct').textContent=`${pct.toFixed(1)}% · Time used ${formatTime(used)}`;
+    $('#finalBand').textContent=band(pct)+(auto?' · Time ended':'');
+    
+    by = by || {};
+    $('#subjects').innerHTML=subjects().map(s=>{
+        let x=by[s]||{score:0,max:0,correct:0,wrong:0};
+        let p=x.max?Math.max(0,x.score/x.max*100):0;
+        return `<div class="subject"><b>${s}</b><div class="score" style="font-size:25px">${x.score} / ${x.max}</div><div class="bar"><i style="width:${Math.max(0,Math.min(100,p))}%;"></i></div><div class="muted">${p.toFixed(1)}% · ${band(p)} · ${x.correct} correct · ${x.wrong} wrong · Time ${formatTime(subjectTime[s]||0)}</div></div>`
+    }).join('');
+
+    function getOptTxt(q, ids){
+        if(ids===null||ids===undefined||ids==='')return '—';
+        if(q.type==='Numeric') return String(ids);
+        let mapId = (id) => {
+            let idx=(q.options||[]).findIndex(o=>o.id===id);
+            return idx>=0?String.fromCharCode(65+idx):id;
+        };
+        if(Array.isArray(ids)) return ids.map(mapId).join(', ');
+        return mapId(ids);
+    }
+
+    $('#analysis').innerHTML=QUESTIONS.map((q,i)=>{
+        let ansVal = answers[i];
+        if (Array.isArray(ansVal) && ansVal.length === 0) ansVal = null;
+        let att = (ansVal !== null && ansVal !== undefined && ansVal !== '');
+        let ok = att && isCorrect(q,ansVal);
+        let status = !att?'UNATTEMPTED':ok?'CORRECT':'INCORRECT';
+        let cls = status==='CORRECT'?'correct':status==='INCORRECT'?'wrong':'';
+        let ua = att ? getOptTxt(q, ansVal) : '—';
+        let ca = q.type==='Numeric' ? q.correctText : getOptTxt(q, q.correctOptionIds||[q.correctOptionId]);
+        return `<div class="review-item ${cls}"><div class="label ${status==='CORRECT'?'good':status==='INCORRECT'?'bad':''}">${status}</div><h3>Question ${i+1} · ${q.subject}</h3><div>${(q.questionImages?.en||[]).map(u=>`<img src="${u}" loading="lazy">`).join('')}</div><div class="answerline"><b>Your answer:</b> ${ua} &nbsp; <b>Correct:</b> ${ca}</div><button class="action" onclick="this.nextElementSibling.classList.toggle('hidden')">See Solution</button><div class="solution hidden">${(q.solutionImages?.en||[]).map(u=>`<img src="${u}" loading="lazy">`).join('')}</div></div>`
+    }).join('');
+}
 function persistResult(total,max,by,used){const payload={version:1,testId:TEST_STORAGE_ID,submittedAt:new Date().toISOString(),score:total,maxScore:max,timeUsed:used,subjectTime:{...subjectTime},subjects:by,answers:[...answers],reviewed:[...reviewed]};try{localStorage.setItem(TEST_STORAGE_ID+'_result',JSON.stringify(payload));}catch(e){} try{if(typeof window.CBT_SAVE_RESULT==='function')window.CBT_SAVE_RESULT(payload);else if(window.parent&&typeof window.parent.CBT_SAVE_RESULT==='function')window.parent.CBT_SAVE_RESULT(payload); }catch(e){} try{window.dispatchEvent(new CustomEvent('jee-cbt-result',{detail:payload}));}catch(e){}}
 function reattempt(){
   submitted=false; current=0; remaining=10800; visited.fill(false); reviewed.fill(false); answers.fill(null); subjectTime={};initSubjectTime();
   try{localStorage.removeItem(TEST_STORAGE_ID+'_draft');localStorage.removeItem(TEST_STORAGE_ID+'_result')}catch(e){}
   $('#result').style.display='none';$('#exam').classList.remove('hidden');$('#timer').style.display='inline-block';$('#submit').textContent='Submit';$('#submit').onclick=()=>submitTest(false);lastTick=Date.now();render();$('#timer').textContent=formatTime(remaining);timerId=setInterval(tick,1000);
 }
-function start(){initSubjectTime();restoreDraft();let res=localStorage.getItem(TEST_STORAGE_ID+'_result');if(res){try{let r=JSON.parse(res);renderResult(r.score,r.maxScore,r.subjectBreakdown,true,r.usedTime||0);return;}catch(e){}}renderTabs();render();$('#timer').textContent=formatTime(remaining);lastTick=Date.now();timerId=setInterval(tick,1000)}
+function start(){initSubjectTime();restoreDraft();let res=localStorage.getItem(TEST_STORAGE_ID+'_result');if(res){try{let r=JSON.parse(res);renderResult(r.score,r.maxScore,r.subjects,true,r.timeUsed||0);return;}catch(e){}}renderTabs();render();$('#timer').textContent=formatTime(remaining);lastTick=Date.now();timerId=setInterval(tick,1000)}
 $('#prev').onclick=()=>{capture();if(current>0){current--;render()}};$('#next').onclick=()=>{capture();if(current<QUESTIONS.length-1){current++;render()}};$('#clear').onclick=clearAns;$('#save').onclick=saveNext;$('#review').onclick=markReview;$('#submit').onclick=()=>submitTest(false);start();
 </script></body></html>
