@@ -60,7 +60,7 @@ export async function saveAttempt(attempt){
       totalScore: totalScoreAgg
     },{merge:true});
     return true;
-
+  }
 async function refreshAnalytics(){
     if(!db||!user){$('#activity').textContent='Sign in to sync your analytics across devices.';return;}
     try {
@@ -100,7 +100,7 @@ async function refreshAnalytics(){
       console.error(e);
       $('#activity').textContent='Error loading analytics. Make sure index exists or check console.';
     }
-  }const snap=await getDocs(query(collection(db,'users',user.uid,'attempts'),orderBy('createdAt','desc'),limit(50)));let tests=0,q=0,correct=0;const rows=[];snap.forEach(d=>{const a=d.data();tests++;q+=Number(a.questions||0);correct+=Number(a.correct||0);rows.push(`${a.title||'CBT Attempt'} — ${a.score??'—'} score`)});$('#mTests').textContent=tests;$('#mQuestions').textContent=q;$('#mAccuracy').textContent=q?Math.round(correct/q*100)+'%':'—';$('#activity').innerHTML=rows.length?rows.slice(0,8).map(x=>`<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07)">${x}</div>`).join(''):'No synced attempts yet.';}
+  }
 function toast(msg){const t=$('#toast');t.textContent=msg;t.style.opacity=1;t.style.transform='translate(-50%,0)';clearTimeout(window._toast);window._toast=setTimeout(()=>{t.style.opacity=0;t.style.transform='translate(-50%,20px)'},3000)}
 
 async function refreshLeaderboard(){
@@ -331,6 +331,41 @@ async function fetchUserAttempts() {
     }
   });
   loadLocalAttempts(); // re-merge local overrides
+  // Auto-sync missing local attempts to Firebase
+  if (db && user) {
+     let existingStorageIds = new Set();
+     snap.forEach(d => {
+       if (d.data().storageId) existingStorageIds.add(d.data().storageId);
+     });
+     testsData.forEach(t => {
+       t.papers.forEach(p => {
+         if (p.url === '#') return;
+         const fileName = p.url.split('/').pop();
+         const storageId = 'embedded-jee-cbt-' + fileName.replace('.html','').replace(/[\s\(\)]+/g, '_').replace(/_$/, '');
+         if (!existingStorageIds.has(storageId)) {
+           const resStr = localStorage.getItem(storageId + '_result');
+           if (resStr) {
+             try {
+               const payload = JSON.parse(resStr);
+               let attempt = {
+                 title: t.title,
+                 score: payload.score,
+                 totalMarks: payload.maxScore,
+                 timeUsed: payload.timeUsed,
+                 questions: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.attempted || 0), 0),
+                 correct: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.correct || 0), 0),
+                 wrong: Object.values(payload.subjects||{}).reduce((acc, sub) => acc + (sub.wrong || 0), 0),
+                 storageId: payload.testId || storageId,
+                 payloadStr: resStr,
+                 testId: t.id
+               };
+               window.APP_API.saveAttempt(attempt).catch(e => console.log('Auto-sync failed', e));
+             } catch(e) {}
+           }
+         }
+       });
+     });
+  }
   renderTests();
 }
 
